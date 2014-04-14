@@ -16,7 +16,7 @@
  * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-
+#include <config.h>
 #include <vpu_wrapper.h>
 #include <string.h>
 #include "../common/phys_mem_meta.h"
