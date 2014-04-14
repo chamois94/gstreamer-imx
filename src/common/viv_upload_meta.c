@@ -24,6 +24,30 @@
 #include <GLES2/gl2.h>
 #include <GLES2/gl2ext.h>
 
+GST_DEBUG_CATEGORY_STATIC(imx_viv_upload_meta_debug);
+#define GST_CAT_DEFAULT imx_viv_upload_meta_debug
+
+static void init_debug_category()
+{
+	static gboolean initialized;
+	if (!initialized)
+	{
+		GST_DEBUG_CATEGORY_INIT(imx_viv_upload_meta_debug, "imxvivuploadmeta", 0,
+				"imx vivante direct texture GstVideoGLTextureUploadMeta");
+		initialized = TRUE;
+	}
+}
+
+static gboolean gl_has_error(const gchar *function)
+{
+	GLenum err = glGetError();
+	if (err == GL_NO_ERROR)
+		return FALSE;
+
+	GST_WARNING("GL ERROR: %s: 0x%x", function, err);
+	return TRUE;
+}
+
 static gboolean gst_imx_vivante_gl_texture_upload(GstVideoGLTextureUploadMeta *meta, guint texture_id[4])
 {
 	GstImxPhysMemMeta *phys_mem_meta;
@@ -47,17 +71,17 @@ static gboolean gst_imx_vivante_gl_texture_upload(GstVideoGLTextureUploadMeta *m
 		texture_id[0], video_meta->width, video_meta->height, meta->width, meta->height);
 
 	glBindTexture(GL_TEXTURE_2D, texture_id[0]);
-// 	if (gl_has_error("glBindTexture"))
-// 		return FALSE;
+	if (gl_has_error("glBindTexture"))
+		return FALSE;
 
 	glTexDirectVIVMap(GL_TEXTURE_2D, meta->width, meta->height, gl_format,
 			&virtual_addr, &physical_addr);
-// 	if (gl_has_error("glTexDirectVIVMap"))
-// 		return FALSE;
+	if (gl_has_error("glTexDirectVIVMap"))
+		return FALSE;
 
 	glTexDirectInvalidateVIV(GL_TEXTURE_2D);
-// 	if (gl_has_error("glTexDirectInvalidateVIV"))
-// 		return FALSE;
+	if (gl_has_error("glTexDirectInvalidateVIV"))
+		return FALSE;
 
 	gst_buffer_unmap(meta->buffer, &map_info);
 
@@ -72,11 +96,15 @@ GstVideoGLTextureUploadMeta *gst_imx_buffer_add_vivante_gl_texture_upload_meta(G
 	GstVideoGLTextureType texture_types[4] = { GST_VIDEO_GL_TEXTURE_TYPE_RGBA, 0 };
 	guint num_extra_lines;
 
+	init_debug_category();
+
 	phys_mem_meta = GST_IMX_PHYS_MEM_META_GET(buffer);
 	g_return_val_if_fail(phys_mem_meta != NULL, NULL);
 
 	video_meta = gst_buffer_get_video_meta(buffer);
 	g_return_val_if_fail(video_meta != NULL, NULL);
+
+	GST_DEBUG("adding vivante direct texture GstVideoGLTextureUploadMeta on buffer %" GST_PTR_FORMAT, buffer);
 
 	upload_meta = gst_buffer_add_video_gl_texture_upload_meta(buffer,
 			GST_VIDEO_GL_TEXTURE_ORIENTATION_X_NORMAL_Y_NORMAL, 1,
