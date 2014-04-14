@@ -49,6 +49,9 @@ struct _GstImxVpuFbBufferPool
 	GstImxVpuFramebuffers *framebuffers;
 	GstVideoInfo video_info;
 	gboolean add_videometa;
+#ifdef HAVE_VIV_UPLOAD
+	gboolean add_vivuploadmeta;
+#endif
 };
 
 

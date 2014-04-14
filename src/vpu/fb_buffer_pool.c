@@ -24,6 +24,9 @@
 #include "utils.h"
 #include "vpu_buffer_meta.h"
 
+#ifdef HAVE_VIV_UPLOAD
+# include "../common/viv_upload_meta.h"
+#endif
 
 GST_DEBUG_CATEGORY_STATIC(imx_vpu_fb_buffer_pool_debug);
 #define GST_CAT_DEFAULT imx_vpu_fb_buffer_pool_debug
@@ -60,6 +63,9 @@ static const gchar ** gst_imx_vpu_fb_buffer_pool_get_options(G_GNUC_UNUSED GstBu
 	{
 		GST_BUFFER_POOL_OPTION_VIDEO_META,
 		GST_BUFFER_POOL_OPTION_IMX_VPU_FRAMEBUFFER,
+#ifdef HAVE_VIV_UPLOAD
+		GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META,
+#endif
 		NULL
 	};
 
@@ -106,6 +112,11 @@ static gboolean gst_imx_vpu_fb_buffer_pool_set_config(GstBufferPool *pool, GstSt
 	vpu_pool->video_info.size = vpu_pool->framebuffers->total_size;
 
 	vpu_pool->add_videometa = gst_buffer_pool_config_has_option(config, GST_BUFFER_POOL_OPTION_VIDEO_META);
+#ifdef HAVE_VIV_UPLOAD
+	vpu_pool->add_vivuploadmeta = gst_buffer_pool_config_has_option(config, GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META);
+	if (vpu_pool->add_vivuploadmeta)
+		vpu_pool->add_videometa = TRUE; /* we need GstVideoMeta for the upload meta */
+#endif
 
 	return GST_BUFFER_POOL_CLASS(gst_imx_vpu_fb_buffer_pool_parent_class)->set_config(pool, config);
 }
@@ -143,6 +154,13 @@ static GstFlowReturn gst_imx_vpu_fb_buffer_pool_alloc_buffer(GstBufferPool *pool
 			info->stride
 		);
 	}
+
+#ifdef HAVE_VIV_UPLOAD
+	if (vpu_pool->add_vivuploadmeta)
+	{
+		gst_imx_buffer_add_vivante_gl_texture_upload_meta(buf);
+	}
+#endif
 
 	*buffer = buf;
 

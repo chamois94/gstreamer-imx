@@ -31,6 +31,9 @@
 #include "../utils.h"
 #include "../fb_buffer_pool.h"
 
+#ifdef HAVE_VIV_UPLOAD
+# include "../common/viv_upload_meta.h"
+#endif
 
 
 /* Some notes about the design of this decoder:
@@ -1520,6 +1523,11 @@ static gboolean gst_imx_vpu_dec_decide_allocation(GstVideoDecoder *decoder, GstQ
 	gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_VIDEO_META);
 	gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_IMX_VPU_FRAMEBUFFER);
 	gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_IMX_PHYS_MEM);
+
+#ifdef HAVE_VIV_UPLOAD
+	gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META);
+#endif
+
 	gst_buffer_pool_set_config(pool, config);
 
 	if (update_pool)
