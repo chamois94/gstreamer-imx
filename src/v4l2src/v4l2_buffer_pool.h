@@ -46,6 +46,9 @@ struct _GstImxV4l2BufferPool
 	guint num_allocated;
 	GstVideoInfo video_info;
 	gboolean add_videometa;
+#ifdef HAVE_VIV_UPLOAD
+	gboolean add_vivuploadmeta;
+#endif
 };
 
 struct _GstImxV4l2BufferPoolClass

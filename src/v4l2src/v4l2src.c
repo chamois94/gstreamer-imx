@@ -32,6 +32,10 @@
 #include "v4l2src.h"
 #include "v4l2_buffer_pool.h"
 
+#ifdef HAVE_VIV_UPLOAD
+# include "../common/viv_upload_meta.h"
+#endif
+
 #define DEFAULT_CAPTURE_MODE 0
 #define DEFAULT_FRAMERATE_NUM 30
 #define DEFAULT_FRAMERATE_DEN 1
@@ -239,6 +243,9 @@ static gboolean gst_imx_v4l2src_decide_allocation(GstBaseSrc *bsrc,
 		config = gst_buffer_pool_get_config(pool);
 		gst_buffer_pool_config_set_params(config, caps, size, min, max);
 		gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_VIDEO_META);
+		#ifdef HAVE_VIV_UPLOAD
+		gst_buffer_pool_config_add_option(config, GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META);
+		#endif
 		gst_buffer_pool_set_config(pool, config);
 	}
 

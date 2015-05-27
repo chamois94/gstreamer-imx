@@ -24,6 +24,10 @@
 #include "../common/phys_mem_meta.h"
 #include "v4l2_buffer_pool.h"
 
+#ifdef HAVE_VIV_UPLOAD
+# include "../common/viv_upload_meta.h"
+#endif
+
 GST_DEBUG_CATEGORY_STATIC(imx_v4l2_buffer_pool_debug);
 #define GST_CAT_DEFAULT imx_v4l2_buffer_pool_debug
 
@@ -67,6 +71,9 @@ static const gchar ** gst_imx_v4l2_buffer_pool_get_options(G_GNUC_UNUSED GstBuff
 	static const gchar *options[] =
 	{
 		GST_BUFFER_POOL_OPTION_VIDEO_META,
+#ifdef HAVE_VIV_UPLOAD
+		GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META,
+#endif
 		NULL
 	};
 
@@ -124,6 +131,11 @@ static gboolean gst_imx_v4l2_buffer_pool_set_config(GstBufferPool *bpool, GstStr
 	pool->num_buffers = min;
 	pool->video_info = info;
 	pool->add_videometa = gst_buffer_pool_config_has_option(config, GST_BUFFER_POOL_OPTION_VIDEO_META);
+#ifdef HAVE_VIV_UPLOAD
+	pool->add_vivuploadmeta = gst_buffer_pool_config_has_option(config, GST_BUFFER_POOL_OPTION_IMX_VIV_UPLOAD_META);
+	if (pool->add_vivuploadmeta)
+		pool->add_videometa = TRUE; /* we need GstVideoMeta for the upload meta */
+#endif
 
 	gst_buffer_pool_config_set_params(config, caps, size, min, max);
 
@@ -195,6 +207,13 @@ static GstFlowReturn gst_imx_v4l2_buffer_pool_alloc_buffer(GstBufferPool *bpool,
 				info->stride
 				);
 	}
+
+#ifdef HAVE_VIV_UPLOAD
+	if (pool->add_vivuploadmeta)
+	{
+		gst_imx_buffer_add_vivante_gl_texture_upload_meta(buf);
+	}
+#endif
 
 	pool->num_allocated++;
 
