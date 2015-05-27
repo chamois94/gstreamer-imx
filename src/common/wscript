@@ -1,8 +1,52 @@
 #!/usr/bin/env python
 
+def check_gles2(conf):
+	return \
+		conf.check_cc(mandatory = 0, lib = 'GLESv2', uselib_store = 'GLES2') and \
+		conf.check_cc(mandatory = 0, header_name = ['GLES2/gl2.h', 'GLES2/gl2ext.h'], uselib_store = 'GLES2')
+
+def check_viv_direct_texture(conf):
+	test_code = """
+		#include <GLES2/gl2.h>
+		#include <GLES2/gl2ext.h>
+
+		int main()
+		{
+			return (GL_VIV_direct_texture) * 0;
+		}
+	"""
+	return conf.check(fragment = test_code, mandatory = 0, execute = 0, define_ret = 0, msg = 'Checking for GL_VIV_direct_texture', uselib = ['GLES2'], okmsg = 'yes', errmsg = 'no')
+
+def check_viv_texformat(conf, texformat):
+	test_code = """
+		#include <GLES2/gl2.h>
+		#include <GLES2/gl2ext.h>
+
+		int main()
+		{
+			return (GL_%s) * 0;
+		}
+	"""
+	return conf.check(fragment = (test_code % texformat), mandatory = 0, execute = 0, define_ret = 0, msg = 'Checking for GLES texture format %s' % texformat, uselib = ['GLES2'], okmsg = 'yes', errmsg = 'no')
 
 def configure(conf):
-	pass
+	from waflib.Build import Logs
+
+	if check_gles2(conf) and check_viv_direct_texture(conf):
+		if check_viv_texformat(conf, 'VIV_I420'):
+			conf.define('HAVE_VIV_I420', 1)
+			conf.define('HAVE_VIV_UPLOAD', 1)
+			conf.env['HAVE_VIV_UPLOAD'] = True
+
+		for texfmt in ['VIV_YV12', 'VIV_NV12', 'VIV_NV21', 'VIV_YUY2', 'VIV_UYVY']:
+			if check_viv_texformat(conf, texfmt):
+				conf.define('HAVE_' + texfmt, 1)
+
+	if conf.env['HAVE_VIV_UPLOAD']:
+		Logs.pprint('GREEN', 'GstVideoGLTextureUploadMeta support using Vivante direct textures will be built')
+		conf.env['VIV_UPLOAD_SOURCES'] = ['viv_upload_meta.c']
+	else:
+		Logs.pprint('RED', 'GstVideoGLTextureUploadMeta support using Vivante direct textures will not be built - dependencies not found')
 
 
 def build(bld):
@@ -10,7 +54,7 @@ def build(bld):
 	bld(
 		features = ['c', bld.env['CLIBTYPE']],
 		includes = ['.', '../..'],
-		uselib = bld.env['COMMON_USELIB'],
+		uselib = bld.env['COMMON_USELIB'] + ['GLES2'],
 		target = 'gstimxcommon',
 		vnum = bld.env['GSTIMX_VERSION'],
 		source = bld.path.ant_glob('*.c'),

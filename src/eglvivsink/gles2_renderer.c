@@ -5,6 +5,7 @@
 #include "gles2_renderer.h"
 #include "egl_platform.h"
 #include "../common/phys_mem_meta.h"
+#include "../common/viv_upload.h"
 
 
 GST_DEBUG_CATEGORY_STATIC(imx_gles2renderer_debug);
@@ -59,8 +60,6 @@ static gboolean gst_imx_egl_viv_sink_gles2_renderer_link_program(GLuint *program
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_destroy_program(GLuint *program, GLuint vertex_shader, GLuint fragment_shader);
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_build_vertex_buffer(GLuint *vertex_buffer);
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_destroy_vertex_buffer(GLuint *vertex_buffer);
-static GLenum gst_imx_egl_viv_sink_gles2_renderer_get_viv_format(GstVideoFormat format);
-static gint gst_imx_egl_viv_sink_gles2_renderer_bpp(GstVideoFormat fmt);
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_search_extension(GLubyte const *extensions);
 
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_setup_resources(GstImxEglVivSinkGLES2Renderer *renderer);
@@ -448,56 +447,6 @@ static gboolean gst_imx_egl_viv_sink_gles2_renderer_destroy_vertex_buffer(GLuint
 	return TRUE;
 }
 
-
-static GLenum gst_imx_egl_viv_sink_gles2_renderer_get_viv_format(GstVideoFormat format)
-{
-	switch (format)
-	{
-#ifdef HAVE_VIV_I420
-		case GST_VIDEO_FORMAT_I420:  return GL_VIV_I420;
-#endif
-#ifdef HAVE_VIV_YV12
-		case GST_VIDEO_FORMAT_YV12:  return GL_VIV_YV12;
-#endif
-#ifdef HAVE_VIV_NV12
-		case GST_VIDEO_FORMAT_NV12:  return GL_VIV_NV12;
-#endif
-#ifdef HAVE_VIV_NV21
-		case GST_VIDEO_FORMAT_NV21:  return GL_VIV_NV21;
-#endif
-#ifdef HAVE_VIV_YUY2
-		case GST_VIDEO_FORMAT_YUY2:  return GL_VIV_YUY2;
-#endif
-#ifdef HAVE_VIV_UYVY
-		case GST_VIDEO_FORMAT_UYVY:  return GL_VIV_UYVY;
-#endif
-		case GST_VIDEO_FORMAT_RGB16: return GL_RGB565;
-		case GST_VIDEO_FORMAT_RGBA:  return GL_RGBA;
-		case GST_VIDEO_FORMAT_BGRA:  return GL_BGRA_EXT;
-		case GST_VIDEO_FORMAT_RGBx:  return GL_RGBA;
-		case GST_VIDEO_FORMAT_BGRx:  return GL_BGRA_EXT;
-		default: return 0;
-	}
-}
-
-
-static gint gst_imx_egl_viv_sink_gles2_renderer_bpp(GstVideoFormat fmt)
-{
-	switch (fmt)
-	{
-		case GST_VIDEO_FORMAT_RGB16: return 2;
-		case GST_VIDEO_FORMAT_RGB: return 3;
-		case GST_VIDEO_FORMAT_RGBA: return 4;
-		case GST_VIDEO_FORMAT_BGRA: return 4;
-		case GST_VIDEO_FORMAT_RGBx: return 4;
-		case GST_VIDEO_FORMAT_BGRx: return 4;
-		case GST_VIDEO_FORMAT_YUY2: return 2;
-		case GST_VIDEO_FORMAT_UYVY: return 2;
-		default: return 1;
-	}
-}
-
-
 static gboolean gst_imx_egl_viv_sink_gles2_renderer_search_extension(GLubyte const *extensions)
 {
 	char *buf = NULL;
@@ -663,7 +612,7 @@ static gboolean gst_imx_egl_viv_sink_gles2_renderer_fill_texture(GstImxEglVivSin
 	phys_mem_meta = NULL;
 	fmt = renderer->video_info.finfo->format;
 
-	gl_format = gst_imx_egl_viv_sink_gles2_renderer_get_viv_format(fmt);
+	gl_format = gst_imx_viv_upload_get_viv_format(fmt);
 	w = renderer->video_info.width;
 	h = renderer->video_info.height;
 
@@ -692,7 +641,7 @@ static gboolean gst_imx_egl_viv_sink_gles2_renderer_fill_texture(GstImxEglVivSin
 	num_extra_lines = is_phys_buf ? phys_mem_meta->y_padding : 0;
 
 	/* stride is in bytes, we need pixels */
-	total_w = stride[0] / gst_imx_egl_viv_sink_gles2_renderer_bpp(fmt);
+	total_w = stride[0] / gst_imx_viv_upload_get_bpp(fmt);
 	total_h = h + num_extra_lines;
 
 	GST_LOG("w/h: %u/%u total_w/h: %u/%u num extra lines: %u", w, h, total_w, total_h, num_extra_lines);
